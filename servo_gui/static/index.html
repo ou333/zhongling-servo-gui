@@ -1,0 +1,1947 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ZEKEEP指擎串口舵机标定工具</title>
+  <link rel="icon" href="data:,">
+  <style>
+    :root {
+      color-scheme: light;
+      --page-bg: #f2f4f7;
+      --surface: #ffffff;
+      --surface-soft: #f8fafc;
+      --border: #dfe3e8;
+      --border-strong: #cbd2da;
+      --text: #20252c;
+      --text-muted: #667085;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --success: #16834b;
+      --success-soft: #e9f7ef;
+      --danger: #cf3f3f;
+      --danger-soft: #fff0f0;
+      --warning: #b76308;
+      --shadow: 0 8px 24px rgba(25, 35, 48, 0.07);
+      --radius: 14px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      background: var(--page-bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      line-height: 1.5;
+    }
+
+    button,
+    select {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    button:disabled,
+    select:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
+    button:focus-visible,
+    select:focus-visible {
+      outline: 3px solid rgba(37, 99, 235, 0.23);
+      outline-offset: 2px;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.96);
+      box-shadow: 0 2px 10px rgba(25, 35, 48, 0.04);
+      backdrop-filter: blur(10px);
+    }
+
+    .topbar-inner {
+      width: min(1160px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 18px 0;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .brand {
+      min-width: 230px;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 20px;
+      letter-spacing: 0.01em;
+    }
+
+    .brand p {
+      margin: 3px 0 0;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    .connection-toolbar {
+      flex: 1;
+      display: flex;
+      align-items: end;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .field {
+      min-width: 260px;
+    }
+
+    .field label {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    select {
+      width: 100%;
+      min-height: 40px;
+      padding: 8px 34px 8px 11px;
+      border: 1px solid var(--border-strong);
+      border-radius: 9px;
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .button {
+      min-height: 40px;
+      padding: 8px 16px;
+      border: 1px solid transparent;
+      border-radius: 9px;
+      background: var(--primary);
+      color: #fff;
+      font-weight: 700;
+      transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+    }
+
+    .button:disabled {
+      opacity: 0.42;
+      cursor: not-allowed;
+    }
+
+    .button:not(:disabled):hover {
+      background: var(--primary-dark);
+    }
+
+    .button:not(:disabled):active {
+      transform: translateY(1px);
+    }
+
+    .button.secondary {
+      border-color: var(--border-strong);
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .button.secondary:not(:disabled):hover {
+      border-color: #aeb7c2;
+      background: var(--surface-soft);
+    }
+
+    .current-port {
+      align-self: center;
+      min-width: 170px;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    .current-port strong {
+      display: block;
+      max-width: 220px;
+      overflow: hidden;
+      color: var(--text);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    main {
+      width: min(1160px, calc(100% - 32px));
+      margin: 24px auto 48px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 18px;
+      padding: 5px;
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      background: #e9edf2;
+    }
+
+    .tab-button {
+      flex: 1;
+      padding: 10px 16px;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text-muted);
+      font-weight: 750;
+    }
+
+    .tab-button[aria-selected="true"] {
+      background: var(--surface);
+      color: var(--primary);
+      box-shadow: 0 1px 5px rgba(25, 35, 48, 0.1);
+    }
+
+    [role="tabpanel"][hidden] {
+      display: none;
+    }
+
+    .stack {
+      display: grid;
+      gap: 16px;
+    }
+
+    .card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .card-header {
+      padding: 17px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .card-title {
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .card-subtitle {
+      margin: 3px 0 0;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    .card-body {
+      padding: 20px;
+    }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+
+    .connection-state {
+      min-width: 150px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 750;
+    }
+
+    .status-dot {
+      width: 11px;
+      height: 11px;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      background: var(--danger);
+      box-shadow: 0 0 0 4px rgba(207, 63, 63, 0.13);
+    }
+
+    .status-dot.connected {
+      background: var(--success);
+      box-shadow: 0 0 0 4px rgba(22, 131, 75, 0.13);
+    }
+
+    .current-ids {
+      flex: 1;
+    }
+
+    .label {
+      display: block;
+      margin-bottom: 7px;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .badge-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      min-height: 29px;
+      align-items: center;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 27px;
+      padding: 4px 9px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface-soft);
+      font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .badge.success {
+      border-color: #b5e1c8;
+      background: var(--success-soft);
+      color: #0d6b3c;
+    }
+
+    .badge.danger {
+      border-color: #f0c0c0;
+      background: var(--danger-soft);
+      color: #ab2929;
+    }
+
+    .empty-text {
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    .servo-status-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+    }
+
+    .servo-status-column {
+      min-height: 120px;
+      padding: 20px;
+    }
+
+    .servo-status-column + .servo-status-column {
+      border-left: 1px solid var(--border);
+    }
+
+    .column-heading {
+      margin: 0 0 13px;
+      font-size: 14px;
+    }
+
+    .id-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .id-button {
+      min-height: 76px;
+      border: 2px solid #e5a2a2;
+      border-radius: 12px;
+      background: var(--danger-soft);
+      color: #a72f2f;
+      font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+      font-size: 22px;
+      font-weight: 800;
+      transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+    }
+
+    .id-button.exists {
+      border-color: #8ed2ac;
+      background: var(--success-soft);
+      color: #0d6b3c;
+    }
+
+    .id-button.selected {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+      transform: translateY(-1px);
+    }
+
+    .id-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 14px rgba(25, 35, 48, 0.11);
+    }
+
+    .id-button.pending {
+      border-color: #d79a2b;
+      background: #fdf3e0;
+      color: #8a5b06;
+    }
+
+    .manual-id {
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px dashed var(--border-strong);
+    }
+
+    .manual-id-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .manual-id-row label {
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    .manual-id-row input {
+      width: 74px;
+      min-height: 36px;
+      padding: 6px 10px;
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--text);
+      font-size: 14px;
+      text-align: center;
+    }
+
+    .manual-arrow {
+      color: var(--text-muted);
+      font-size: 16px;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-top: 13px;
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-swatch {
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+      background: var(--danger);
+    }
+
+    .legend-swatch.exists {
+      background: var(--success);
+    }
+
+    .log-panel {
+      height: 230px;
+      overflow-y: auto;
+      padding: 4px 0;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #111827;
+      color: #d8dee9;
+      font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+      font-size: 12px;
+    }
+
+    .log-entry {
+      display: grid;
+      grid-template-columns: 86px 1fr;
+      gap: 8px;
+      padding: 6px 11px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+      overflow-wrap: anywhere;
+    }
+
+    .log-entry:last-child {
+      border-bottom: 0;
+    }
+
+    .log-time {
+      color: #8b98aa;
+    }
+
+    .log-entry.success .log-message {
+      color: #72dda1;
+    }
+
+    .log-entry.error .log-message {
+      color: #ff8585;
+    }
+
+    .log-entry.info .log-message {
+      color: #a9c6ff;
+    }
+
+    /* 元素自带的 display 规则会盖过 [hidden] 的 UA 样式，这里统一兜底。 */
+    [hidden] {
+      display: none !important;
+    }
+
+    .toolbar-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .toolbar-row label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: #c6d0de;
+    }
+
+    .toolbar-row input[type="number"] {
+      width: 74px;
+      padding: 5px 8px;
+      border-radius: 7px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: rgba(9, 14, 22, 0.7);
+      color: #e6ecf5;
+      font: inherit;
+    }
+
+    .hint-text {
+      font-size: 12px;
+      color: #8b98aa;
+      margin: 0 0 12px;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .data-table th,
+    .data-table td {
+      padding: 9px 10px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+      white-space: nowrap;
+    }
+
+    .data-table th {
+      font-size: 12px;
+      font-weight: 600;
+      color: #8b98aa;
+    }
+
+    .data-table tbody tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .table-scroll {
+      overflow-x: auto;
+    }
+
+    .mono {
+      font-family: ui-monospace, "JetBrains Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    }
+
+    .state-pill {
+      display: inline-block;
+      padding: 2px 9px;
+      border-radius: 999px;
+      font-size: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      color: #c6d0de;
+    }
+
+    .state-pill.ok {
+      color: #72dda1;
+      border-color: rgba(114, 221, 161, 0.45);
+      background: rgba(114, 221, 161, 0.12);
+    }
+
+    .state-pill.adjust {
+      color: #ffc46b;
+      border-color: rgba(255, 196, 107, 0.4);
+      background: rgba(255, 196, 107, 0.1);
+    }
+
+    .state-pill.dead {
+      color: #ff8585;
+      border-color: rgba(255, 133, 133, 0.4);
+      background: rgba(255, 133, 133, 0.1);
+    }
+
+    .row-hint {
+      font-size: 12px;
+      color: #8b98aa;
+      white-space: normal;
+      max-width: 420px;
+    }
+
+    .button.tiny {
+      padding: 5px 12px;
+      font-size: 12px;
+    }
+
+    .button.danger {
+      background: #c9483f;
+      border-color: #c9483f;
+    }
+
+    .button.danger:not(:disabled):hover {
+      background: #d8574d;
+    }
+
+    .warn-box {
+      border: 1px solid rgba(255, 133, 133, 0.45);
+      background: rgba(255, 133, 133, 0.1);
+      color: #ff9d9d;
+      border-radius: 9px;
+      padding: 10px 12px;
+      font-size: 13px;
+      line-height: 1.55;
+      margin-bottom: 12px;
+    }
+
+    .info-box {
+      border: 1px solid rgba(169, 198, 255, 0.35);
+      background: rgba(169, 198, 255, 0.08);
+      color: #a9c6ff;
+      border-radius: 9px;
+      padding: 10px 12px;
+      font-size: 12.5px;
+      line-height: 1.55;
+      margin-bottom: 12px;
+    }
+
+    .command-list {
+      margin: 0 0 12px;
+      padding: 10px 12px;
+      border-radius: 9px;
+      background: rgba(9, 14, 22, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      list-style: none;
+      display: grid;
+      gap: 4px;
+      color: #ffd08a;
+      font-family: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+      font-size: 13px;
+    }
+
+    .dialog-field {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .dialog-field label {
+      font-size: 12px;
+      color: #8b98aa;
+    }
+
+    .dialog-field input[type="text"] {
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: rgba(9, 14, 22, 0.75);
+      color: #e6ecf5;
+      font-family: ui-monospace, Menlo, Consolas, monospace;
+      font-size: 13px;
+    }
+
+    .dialog-result {
+      border-radius: 9px;
+      padding: 10px 12px;
+      font-size: 12.5px;
+      line-height: 1.6;
+      margin-bottom: 12px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .dialog-result.ok {
+      border: 1px solid rgba(114, 221, 161, 0.4);
+      background: rgba(114, 221, 161, 0.1);
+      color: #9ce7bd;
+    }
+
+    .dialog-result.bad {
+      border: 1px solid rgba(255, 133, 133, 0.45);
+      background: rgba(255, 133, 133, 0.1);
+      color: #ff9d9d;
+    }
+
+    .placeholder {
+      min-height: 380px;
+      display: grid;
+      place-items: center;
+      padding: 40px;
+      text-align: center;
+    }
+
+    .placeholder-mark {
+      width: 56px;
+      height: 56px;
+      margin: 0 auto 14px;
+      display: grid;
+      place-items: center;
+      border-radius: 16px;
+      background: #e8eefc;
+      color: var(--primary);
+      font-size: 24px;
+      font-weight: 800;
+    }
+
+    .placeholder h2 {
+      margin: 0 0 7px;
+      font-size: 18px;
+    }
+
+    .placeholder p {
+      margin: 0;
+      color: var(--text-muted);
+    }
+
+    dialog {
+      width: min(440px, calc(100% - 32px));
+      padding: 0;
+      border: 0;
+      border-radius: 15px;
+      box-shadow: 0 24px 70px rgba(17, 24, 39, 0.25);
+    }
+
+    dialog::backdrop {
+      background: rgba(17, 24, 39, 0.45);
+      backdrop-filter: blur(2px);
+    }
+
+    .dialog-content {
+      padding: 24px;
+    }
+
+    .dialog-content h2 {
+      margin: 0 0 9px;
+      font-size: 19px;
+    }
+
+    .dialog-content p {
+      margin: 0;
+      color: var(--text-muted);
+    }
+
+    .dialog-notice {
+      margin-top: 17px;
+      padding: 12px 14px;
+      border: 1px solid #f1d3a8;
+      border-radius: 9px;
+      background: #fff8ec;
+      color: #8a4b06;
+      font-weight: 700;
+    }
+
+    .dialog-actions {
+      margin-top: 22px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    @media (max-width: 900px) {
+      .topbar-inner {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .connection-toolbar {
+        justify-content: flex-start;
+        flex-wrap: wrap;
+      }
+
+      .field {
+        flex: 1 1 260px;
+      }
+
+      .current-port {
+        align-self: center;
+      }
+    }
+
+    @media (max-width: 680px) {
+      .topbar-inner,
+      main {
+        width: min(100% - 20px, 1160px);
+      }
+
+      .connection-toolbar {
+        align-items: stretch;
+      }
+
+      .field,
+      .current-port {
+        flex: 1 0 100%;
+      }
+
+      .current-port {
+        align-self: flex-start;
+      }
+
+      .status-row {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .servo-status-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .servo-status-column + .servo-status-column {
+        border-top: 1px solid var(--border);
+        border-left: 0;
+      }
+
+      .id-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .card-header {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .card-header .button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <h1>ZEKEEP指擎串口舵机标定工具</h1>
+        <p>连接、扫描并核对舵机编号</p>
+      </div>
+      <div class="connection-toolbar" aria-label="串口连接控制">
+        <div class="field">
+          <label for="port-select">串口</label>
+          <select id="port-select" aria-label="选择串口">
+            <option value="">正在读取串口列表…</option>
+          </select>
+        </div>
+        <button class="button" id="connect-button" type="button">连接</button>
+        <button class="button secondary" id="disconnect-button" type="button" disabled>断开</button>
+        <div class="current-port">
+          当前串口
+          <strong id="current-port">未连接</strong>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <nav class="tabs" role="tablist" aria-label="功能标签页">
+      <button class="tab-button" id="tab-id" type="button" role="tab" aria-selected="true" aria-controls="panel-id">ID 标定</button>
+      <button class="tab-button" id="tab-reading" type="button" role="tab" aria-selected="false" aria-controls="panel-reading">舵机读数</button>
+      <button class="tab-button" id="tab-zero" type="button" role="tab" aria-selected="false" aria-controls="panel-zero">零位标定</button>
+    </nav>
+
+    <section id="panel-id" role="tabpanel" aria-labelledby="tab-id">
+      <div class="stack">
+        <article class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">系统状态</h2>
+              <p class="card-subtitle">连接成功后可扫描 ID 000–010</p>
+            </div>
+            <button class="button secondary" id="scan-button" type="button" disabled>重新扫描</button>
+          </div>
+          <div class="card-body status-row">
+            <div class="connection-state">
+              <span class="status-dot" id="status-dot" aria-hidden="true"></span>
+              <span id="connection-state">未连接</span>
+            </div>
+            <div class="current-ids">
+              <span class="label">当前舵机 ID 列表</span>
+              <div class="badge-list" id="current-id-list">
+                <span class="empty-text">尚未发现舵机</span>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">舵机状态</h2>
+              <p class="card-subtitle">显示最近一次扫描结果</p>
+            </div>
+          </div>
+          <div class="servo-status-grid">
+            <section class="servo-status-column" aria-labelledby="found-heading">
+              <h3 class="column-heading" id="found-heading">发现的舵机</h3>
+              <div class="badge-list" id="found-list">
+                <span class="empty-text">暂无扫描结果</span>
+              </div>
+            </section>
+            <section class="servo-status-column" aria-labelledby="unknown-heading">
+              <h3 class="column-heading" id="unknown-heading">未识别 ID</h3>
+              <div class="badge-list" id="unknown-list">
+                <span class="empty-text">暂无扫描结果</span>
+              </div>
+              <p class="hint-text" id="pending-note" hidden></p>
+            </section>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">ID 标定</h2>
+              <p class="card-subtitle">绿色表示已存在，红色表示当前扫描未发现</p>
+            </div>
+          </div>
+          <div class="card-body">
+            <p class="hint-text" id="id-blocked" hidden></p>
+            <div class="id-grid" id="id-grid" aria-label="选择舵机 ID"></div>
+            <div class="manual-id">
+              <span class="label">手动指定源 ID 和目标 ID</span>
+              <div class="manual-id-row">
+                <label for="manual-source">当前 ID</label>
+                <input type="text" id="manual-source" class="mono" inputmode="numeric"
+                       autocomplete="off" spellcheck="false" placeholder="002" maxlength="3">
+                <span class="manual-arrow" aria-hidden="true">→</span>
+                <label for="manual-target">目标 ID</label>
+                <input type="text" id="manual-target" class="mono" inputmode="numeric"
+                       autocomplete="off" spellcheck="false" placeholder="003" maxlength="3">
+                <button class="button tiny danger" id="manual-set-id" type="button">改号</button>
+              </div>
+              <p class="hint-text">
+                上面七个按钮默认把总线上唯一在线的那个舵机改成对应编号；
+                已经有编号的舵机要改成别的编号时用这里，例如 002 → 003。
+                同样会强制校验总线上只有一个舵机，同样会自动追加开机释力。
+              </p>
+            </div>
+            <div class="legend" aria-hidden="true">
+              <span class="legend-item"><span class="legend-swatch exists"></span>已存在</span>
+              <span class="legend-item"><span class="legend-swatch"></span>不存在</span>
+              <span class="legend-item"><span class="legend-swatch" style="background:#fdf3e0;border-color:#d79a2b"></span>待断电重启</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">操作日志</h2>
+              <p class="card-subtitle">记录页面发出的所有 API 请求及返回</p>
+            </div>
+            <button class="button secondary" id="clear-log-button" type="button">清空日志</button>
+          </div>
+          <div class="card-body">
+            <div class="log-panel" id="log-panel" role="log" aria-live="polite" aria-label="操作日志"></div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="panel-reading" role="tabpanel" aria-labelledby="tab-reading" hidden>
+      <div class="stack">
+        <article class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">舵机读数</h2>
+              <p class="card-subtitle">每一路开关独立，开启后持续读取，直到你点停止</p>
+            </div>
+            <button class="button secondary" id="stop-all-reading" type="button" disabled>全部停止</button>
+          </div>
+          <div class="card-body">
+            <div class="info-box">
+              开启读数时默认先对该轴发一次 <span class="mono">PULK</span> 释力，否则舵盘拧不动。
+              停止读数时<strong>不会</strong>发 <span class="mono">PULR</span>，关节保持可手动旋转状态。
+              目标 PWM 由后端固定表提供，界面不可修改。
+            </div>
+            <div class="toolbar-row">
+              <label>容差 ±<input type="number" id="tolerance-input" min="0" max="500" step="1" value="10"></label>
+              <label><input type="checkbox" id="keep-torque"> 保持力矩（开读数时不发 PULK）</label>
+            </div>
+            <div class="table-scroll">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>ID</th><th>目标 PWM</th><th>标定命令</th><th>当前 PWM</th>
+                    <th>偏差</th><th>状态</th><th>读数开关</th><th>提示</th>
+                  </tr>
+                </thead>
+                <tbody id="reading-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="panel-zero" role="tabpanel" aria-labelledby="tab-zero" hidden>
+      <div class="stack">
+        <article class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">机械零位标定</h2>
+              <p class="card-subtitle">把关节扶到正确机械零位并扶稳，再执行标定</p>
+            </div>
+            <button class="button secondary" id="refresh-zero" type="button" disabled>刷新当前读数</button>
+          </div>
+          <div class="card-body">
+            <div class="warn-box">
+              <strong>持久写入，掉电不丢失。</strong>
+              把该关节放在正确机械零位并持续扶稳后再执行；命令会把当前物理位置直接写成目标值，
+              不需要、也不要先把舵盘手动拧到目标 PWM。写入前会连续采样三次，读数跨度超过 5 会拒绝写入。
+              标定后保持释力状态，不自动恢复扭矩。
+              目标读数不是 1500 的轴没有命令可用（<span class="mono">PSCK</span> 只能映射成 1500），
+              只能在「舵机读数」页手动旋转舵盘对位。
+            </div>
+            <p class="hint-text" id="zero-blocked" hidden></p>
+            <div class="table-scroll">
+              <table class="data-table">
+                <thead>
+                  <tr><th>ID</th><th>命令</th><th>目标 PWM</th><th>当前 PWM</th><th>操作</th></tr>
+                </thead>
+                <tbody id="zero-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </article>
+
+      </div>
+    </section>
+  </main>
+
+  <dialog id="write-dialog" aria-labelledby="write-title">
+    <div class="dialog-content">
+      <h2 id="write-title">确认持久写入</h2>
+      <p id="write-description"></p>
+      <div class="warn-box" id="write-warning"></div>
+      <p class="hint-text">将要发出的报文：</p>
+      <ul class="command-list" id="write-commands"></ul>
+      <div class="dialog-field">
+        <label for="write-confirm">请手动输入确认文本 <span class="mono" id="write-expected"></span></label>
+        <input type="text" id="write-confirm" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="dialog-result" id="write-result" hidden></div>
+      <div class="dialog-actions">
+        <button class="button secondary" id="write-cancel" type="button">取消</button>
+        <button class="button danger" id="write-execute" type="button">执行</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script>
+    "use strict";
+
+    const POLL_INTERVAL_MS = 1000;
+    const state = {
+      connected: false,
+      port: null,
+      baudrate: null,
+      foundIds: [],
+      unknownIds: [],
+      selectedId: null,
+      pollTimer: null,
+    };
+
+    const elements = {
+      portSelect: document.querySelector("#port-select"),
+      connectButton: document.querySelector("#connect-button"),
+      disconnectButton: document.querySelector("#disconnect-button"),
+      currentPort: document.querySelector("#current-port"),
+      statusDot: document.querySelector("#status-dot"),
+      connectionState: document.querySelector("#connection-state"),
+      currentIdList: document.querySelector("#current-id-list"),
+      foundList: document.querySelector("#found-list"),
+      unknownList: document.querySelector("#unknown-list"),
+      scanButton: document.querySelector("#scan-button"),
+      idGrid: document.querySelector("#id-grid"),
+      logPanel: document.querySelector("#log-panel"),
+      clearLogButton: document.querySelector("#clear-log-button"),
+      dialog: document.querySelector("#id-dialog"),
+      dialogDescription: document.querySelector("#dialog-description"),
+      dialogCancel: document.querySelector("#dialog-cancel"),
+      dialogConfirm: document.querySelector("#dialog-confirm"),
+      tabs: Array.from(document.querySelectorAll("[role='tab']")),
+      panels: Array.from(document.querySelectorAll("[role='tabpanel']")),
+    };
+
+    function timestamp() {
+      return new Intl.DateTimeFormat("zh-CN", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      }).format(new Date());
+    }
+
+    function addLog(message, level = "info") {
+      const entry = document.createElement("div");
+      entry.className = `log-entry ${level}`;
+      const time = document.createElement("span");
+      time.className = "log-time";
+      time.textContent = timestamp();
+      const text = document.createElement("span");
+      text.className = "log-message";
+      text.textContent = message;
+      entry.append(time, text);
+      elements.logPanel.append(entry);
+      while (elements.logPanel.children.length > 400) {
+        elements.logPanel.firstElementChild.remove();
+      }
+      elements.logPanel.scrollTop = elements.logPanel.scrollHeight;
+    }
+
+    /** 把后端返回里的错误提炼成一句人话。 */
+    function errorText(payload, status) {
+      if (payload && payload.error && payload.error.message) return payload.error.message;
+      if (status) return `服务返回 HTTP ${status}`;
+      return "无法连接到本工具的后端服务";
+    }
+
+    /**
+     * 统一的请求层。操作日志面向操作者，所以这里**不记流水账**：
+     * 成功由各调用点自己写一句「做了什么」，失败在这里记一句「哪一步失败了、为什么」。
+     * 原始报文一律进浏览器控制台，留给排查用。
+     */
+    async function apiRequest(path, options = {}, label = null) {
+      const method = options.method || "GET";
+      try {
+        const response = await fetch(path, options);
+        const text = await response.text();
+        let payload = {};
+        if (text) {
+          try {
+            payload = JSON.parse(text);
+          } catch (error) {
+            console.debug("[servo-gui]", method, path, "响应不是有效 JSON:", text);
+            if (label) addLog(`${label} 失败：服务返回的内容无法解析`, "error");
+            return { ok: false, status: response.status, payload: null };
+          }
+        }
+        console.debug("[servo-gui]", method, path, response.status, payload);
+        if (!response.ok && label) {
+          addLog(`${label} 失败：${errorText(payload, response.status)}`, "error");
+        }
+        return { ok: response.ok, status: response.status, payload };
+      } catch (error) {
+        console.debug("[servo-gui]", method, path, "请求异常:", error);
+        if (label) addLog(`${label} 失败：${errorText(null, 0)}`, "error");
+        return { ok: false, status: 0, payload: null };
+      }
+    }
+
+    /** 只要 payload 的简化版；失败返回 null。 */
+    async function apiFetch(path, options = {}, label = null) {
+      const { ok, payload } = await apiRequest(path, options, label);
+      return ok ? payload : null;
+    }
+
+    function formatId(id) {
+      return String(id).padStart(3, "0");
+    }
+
+    function sameIds(left, right) {
+      return left.length === right.length && left.every((id, index) => id === right[index]);
+    }
+
+    function renderBadgeList(container, ids, emptyMessage, style) {
+      container.replaceChildren();
+      if (!ids.length) {
+        const empty = document.createElement("span");
+        empty.className = "empty-text";
+        empty.textContent = emptyMessage;
+        container.append(empty);
+        return;
+      }
+      ids.forEach((id) => {
+        const badge = document.createElement("span");
+        badge.className = `badge ${style}`;
+        badge.textContent = formatId(id);
+        container.append(badge);
+      });
+    }
+
+    function renderIdButtons() {
+      const found = new Set(state.foundIds);
+      elements.idGrid.replaceChildren();
+      for (let id = 1; id <= 7; id += 1) {
+        const button = document.createElement("button");
+        const exists = found.has(id);
+        const pendingVerb = state.pendingPowerCycle[String(id)];
+        button.type = "button";
+        button.className = "id-button";
+        if (exists) button.classList.add("exists");
+        else if (pendingVerb) button.classList.add("pending");
+        if (state.selectedId === id) button.classList.add("selected");
+        button.textContent = formatId(id);
+        button.setAttribute("aria-pressed", String(state.selectedId === id));
+        const label = exists ? "已存在" : (pendingVerb ? `已发 ${pendingVerb}，待断电重启` : "不存在");
+        button.setAttribute("aria-label", `选择舵机 ID ${formatId(id)}，${label}`);
+        button.addEventListener("click", () => selectId(id));
+        elements.idGrid.append(button);
+      }
+    }
+
+    function applyStatus(status) {
+      const foundIds = Array.isArray(status.found_ids) ? status.found_ids : [];
+      const unknownIds = Array.isArray(status.unknown_ids) ? status.unknown_ids : [];
+      const scanResultChanged = !sameIds(state.foundIds, foundIds)
+        || !sameIds(state.unknownIds, unknownIds);
+      state.connected = Boolean(status.connected);
+      state.port = status.port;
+      state.baudrate = status.baudrate;
+      state.foundIds = foundIds;
+      state.unknownIds = unknownIds;
+
+      elements.statusDot.classList.toggle("connected", state.connected);
+      elements.connectionState.textContent = state.connected ? "已连接" : "未连接";
+      elements.currentPort.textContent = state.connected
+        ? `${state.port} · ${state.baudrate}`
+        : "未连接";
+      elements.connectButton.disabled = state.connected || !elements.portSelect.value;
+      elements.disconnectButton.disabled = !state.connected;
+      elements.portSelect.disabled = state.connected;
+      elements.scanButton.disabled = !state.connected;
+
+      if (Array.isArray(status.reading_ids)) {
+        state.activeIds = status.reading_ids;
+      }
+      state.pendingPowerCycle = status.pending_power_cycle || {};
+
+      if (scanResultChanged) {
+        renderBadgeList(elements.currentIdList, state.foundIds, "尚未发现舵机", "success");
+        renderBadgeList(elements.foundList, state.foundIds, "暂无扫描结果", "success");
+        renderBadgeList(elements.unknownList, state.unknownIds, "暂无扫描结果", "danger");
+        renderIdButtons();
+      }
+      onStatusApplied();
+    }
+
+    async function loadPorts() {
+      const payload = await apiFetch("/api/ports", {}, "读取串口列表");
+      if (!payload || !Array.isArray(payload.ports)) return;
+      elements.portSelect.replaceChildren();
+      if (!payload.ports.length) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "未发现可用串口";
+        elements.portSelect.append(option);
+      } else {
+        payload.ports.forEach((port) => {
+          const option = document.createElement("option");
+          option.value = port.device;
+          option.textContent = port.description && port.description !== "n/a"
+            ? `${port.device} — ${port.description}`
+            : port.device;
+          elements.portSelect.append(option);
+        });
+      }
+      elements.connectButton.disabled = state.connected || !elements.portSelect.value;
+    }
+
+    /** 1Hz 轮询：正常时一句不记；断了记一次，恢复再记一次。 */
+    async function refreshStatus() {
+      const { ok, payload } = await apiRequest("/api/status");
+      if (ok && payload) {
+        if (state.statusOk === false) addLog("已重新连上后端服务", "success");
+        state.statusOk = true;
+        applyStatus(payload);
+        return;
+      }
+      if (state.statusOk !== false) {
+        state.statusOk = false;
+        addLog("与后端服务失去联系，正在重试", "error");
+      }
+    }
+
+    async function connect() {
+      const port = elements.portSelect.value;
+      if (!port) {
+        addLog("无法连接：请先选择串口", "error");
+        return;
+      }
+      elements.connectButton.disabled = true;
+      const payload = await apiFetch("/api/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ port, baudrate: 115200 }),
+      }, `连接 ${port}`);
+      if (payload && payload.status) {
+        applyStatus(payload.status);
+        addLog(`已连接 ${payload.status.port} · ${payload.status.baudrate}`, "success");
+        await scan();
+      } else {
+        elements.connectButton.disabled = state.connected || !elements.portSelect.value;
+      }
+    }
+
+    async function disconnect() {
+      elements.disconnectButton.disabled = true;
+      const payload = await apiFetch("/api/disconnect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      }, "断开串口");
+      if (payload && payload.status) {
+        applyStatus(payload.status);
+        addLog("已断开串口", "info");
+      } else {
+        elements.disconnectButton.disabled = !state.connected;
+      }
+    }
+
+    async function scan() {
+      elements.scanButton.disabled = true;
+      const payload = await apiFetch("/api/scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ start: 0, end: 10 }),
+      }, "扫描舵机");
+      if (payload) {
+        state.foundIds = Array.isArray(payload.found_ids) ? payload.found_ids : [];
+        state.unknownIds = Array.isArray(payload.unknown_ids) ? payload.unknown_ids : [];
+        state.pendingPowerCycle = payload.pending_power_cycle || state.pendingPowerCycle;
+        renderBadgeList(elements.currentIdList, state.foundIds, "尚未发现舵机", "success");
+        renderBadgeList(elements.foundList, state.foundIds, "暂无扫描结果", "success");
+        renderBadgeList(elements.unknownList, state.unknownIds, "暂无扫描结果", "danger");
+        renderIdButtons();
+        updatePendingNote();
+        const found = state.foundIds.map(formatId);
+        const pending = Object.keys(state.pendingPowerCycle).map(formatId);
+        const pendingText = pending.length
+          ? `；${pending.join("、")} 已设开机释力，待断电重启`
+          : "";
+        if (found.length) {
+          addLog(`扫描完成，发现舵机 ${found.join("、")}${pendingText}`, "success");
+        } else if (pending.length) {
+          // 刚发过 PCSM 就扫不到是正常的，别标成红色错误吓人。
+          addLog(`扫描完成，总线上暂无可通信的舵机${pendingText}`, "info");
+        } else {
+          addLog("扫描完成，未发现任何舵机", "error");
+        }
+      }
+      updateActionAvailability();
+    }
+
+    Object.assign(elements, {
+      toleranceInput: document.querySelector("#tolerance-input"),
+      keepTorque: document.querySelector("#keep-torque"),
+      readingBody: document.querySelector("#reading-body"),
+      stopAllReading: document.querySelector("#stop-all-reading"),
+      zeroBody: document.querySelector("#zero-body"),
+      refreshZero: document.querySelector("#refresh-zero"),
+      idBlocked: document.querySelector("#id-blocked"),
+      manualSource: document.querySelector("#manual-source"),
+      manualTarget: document.querySelector("#manual-target"),
+      manualSetId: document.querySelector("#manual-set-id"),
+      zeroBlocked: document.querySelector("#zero-blocked"),
+      pendingNote: document.querySelector("#pending-note"),
+      writeDialog: document.querySelector("#write-dialog"),
+      writeTitle: document.querySelector("#write-title"),
+      writeDescription: document.querySelector("#write-description"),
+      writeWarning: document.querySelector("#write-warning"),
+      writeCommands: document.querySelector("#write-commands"),
+      writeExpected: document.querySelector("#write-expected"),
+      writeConfirm: document.querySelector("#write-confirm"),
+      writeResult: document.querySelector("#write-result"),
+      writeCancel: document.querySelector("#write-cancel"),
+      writeExecute: document.querySelector("#write-execute"),
+    });
+
+    const READING_POLL_MS = 200;
+    const READING_BACKOFF_MS = 5000;
+    const SERVO_IDS = [1, 2, 3, 4, 5, 6, 7];
+
+    Object.assign(state, {
+      plan: {},
+      statusOk: null,
+      pendingPowerCycle: {},
+      tolerance: 10,
+      readings: {},
+      activeIds: [],
+      readingTimer: null,
+      readingFailStreak: 0,
+      backoffLogged: false,
+      writing: false,
+      pendingWrite: null,
+      rows: { reading: new Map(), zero: new Map() },
+    });
+
+    function planOf(id) {
+      return state.plan[formatId(id)] || null;
+    }
+
+    function setWritingBusy(busy) {
+      state.writing = busy;
+      updateActionAvailability();
+    }
+
+    /** 持久写进行中，或某轴正在读数时，禁用会抢总线的按钮。 */
+    function updateActionAvailability() {
+      const connected = state.connected;
+      const reading = state.activeIds.length > 0;
+      const blocked = state.writing || !connected;
+      elements.scanButton.disabled = blocked;
+      elements.disconnectButton.disabled = blocked;
+      elements.refreshZero.disabled = blocked || reading;
+      elements.stopAllReading.disabled = !connected || !reading || state.writing;
+      state.rows.reading.forEach((row, id) => {
+        row.toggle.disabled = !connected || state.writing;
+        const active = state.activeIds.includes(id);
+        row.toggle.textContent = active ? "停止读数" : "开始读数";
+        row.toggle.classList.toggle("secondary", active);
+      });
+      state.rows.zero.forEach((row) => {
+        row.calibrate.disabled = row.manual || blocked || reading;
+      });
+      document.querySelectorAll(".id-button").forEach((button) => {
+        button.disabled = blocked || reading;
+      });
+      elements.manualSetId.disabled = blocked || reading;
+      elements.manualSource.disabled = blocked || reading;
+      elements.manualTarget.disabled = blocked || reading;
+
+      let reason = "";
+      if (!connected) {
+        reason = "未连接串口，持久写入不可用。";
+      } else if (state.writing) {
+        reason = "正在执行写入，其余操作已暂时禁用。";
+      } else if (reading) {
+        const listed = state.activeIds.map(formatId).join("、");
+        reason = `有舵机在读数中（${listed}），持久写入前请先停止全部读数。`;
+      }
+      [elements.idBlocked, elements.zeroBlocked].forEach((node) => {
+        node.textContent = reason;
+        node.hidden = !reason;
+      });
+    }
+
+    function cell(row, text, className) {
+      const td = document.createElement("td");
+      if (className) td.className = className;
+      td.textContent = text;
+      row.append(td);
+      return td;
+    }
+
+    function buildReadingTable() {
+      elements.readingBody.replaceChildren();
+      state.rows.reading.clear();
+      SERVO_IDS.forEach((id) => {
+        const plan = planOf(id);
+        const tr = document.createElement("tr");
+        cell(tr, formatId(id), "mono");
+        cell(tr, plan ? String(plan.target) : "—", "mono");
+        cell(tr, plan ? (plan.command || "手动") : "—", "mono");
+        const pwm = cell(tr, "————", "mono");
+        const deviation = cell(tr, "—", "mono");
+        const stateTd = document.createElement("td");
+        const pill = document.createElement("span");
+        pill.className = "state-pill";
+        pill.textContent = "未开启";
+        stateTd.append(pill);
+        tr.append(stateTd);
+        const actionTd = document.createElement("td");
+        const toggle = document.createElement("button");
+        toggle.type = "button";
+        toggle.className = "button tiny";
+        toggle.textContent = "开始读数";
+        toggle.addEventListener("click", () => toggleReading(id));
+        actionTd.append(toggle);
+        tr.append(actionTd);
+        const hint = cell(tr, "", "row-hint");
+        elements.readingBody.append(tr);
+        state.rows.reading.set(id, { pwm, deviation, pill, toggle, hint });
+      });
+    }
+
+    function updateReadingCells() {
+      state.rows.reading.forEach((row, id) => {
+        const plan = planOf(id);
+        const active = state.activeIds.includes(id);
+        const entry = state.readings[formatId(id)] || state.readings[String(id)];
+        if (!active) {
+          row.pwm.textContent = "————";
+          row.deviation.textContent = "—";
+          row.pill.className = "state-pill";
+          row.pill.textContent = "未开启";
+          row.hint.textContent = "";
+          return;
+        }
+        if (!entry) {
+          // 刚开启、第一次轮询还没回来，别误报成无响应。
+          row.pwm.textContent = "————";
+          row.deviation.textContent = "—";
+          row.pill.className = "state-pill";
+          row.pill.textContent = "读取中…";
+          row.hint.textContent = "";
+          return;
+        }
+        if (entry.pwm === null || entry.pwm === undefined) {
+          row.pwm.textContent = "————";
+          row.deviation.textContent = "—";
+          row.pill.className = "state-pill dead";
+          row.pill.textContent = "无响应";
+          row.hint.textContent = entry.message
+            ? `${formatId(id)}：${entry.message}`
+            : `${formatId(id)} 没有回包，检查接线与编号。`;
+          return;
+        }
+        const target = plan ? plan.target : null;
+        const deviation = target === null ? null : entry.pwm - target;
+        row.pwm.textContent = String(entry.pwm);
+        row.deviation.textContent = deviation === null
+          ? "—"
+          : `${deviation > 0 ? "+" : ""}${deviation}`;
+        if (deviation !== null && Math.abs(deviation) <= state.tolerance) {
+          row.pill.className = "state-pill ok";
+          row.pill.textContent = "OK";
+          row.hint.textContent = `${formatId(id)} 已在目标 ${target} 的 ±${state.tolerance} 以内。`;
+        } else {
+          row.pill.className = "state-pill adjust";
+          row.pill.textContent = "需调整";
+          row.hint.textContent = plan
+            ? `${formatId(id)} 机械零位目标为 ${target}，当前偏差 ${deviation > 0 ? "+" : ""}${deviation}；`
+              + `请在机械零位执行 ${plan.command} 标定。`
+            : "";
+        }
+      });
+    }
+
+    function buildZeroTable() {
+      elements.zeroBody.replaceChildren();
+      state.rows.zero.clear();
+      SERVO_IDS.forEach((id) => {
+        const plan = planOf(id);
+        const manual = Boolean(plan && plan.manual);
+        const tr = document.createElement("tr");
+        cell(tr, formatId(id), "mono");
+        cell(tr, plan ? (plan.command || "无命令") : "—", "mono");
+        cell(tr, plan ? String(plan.target) : "—", "mono");
+        const current = cell(tr, "————", "mono");
+        const actionTd = document.createElement("td");
+        const calibrate = document.createElement("button");
+        calibrate.type = "button";
+        calibrate.className = "button tiny danger";
+        calibrate.textContent = "标定零位";
+        calibrate.addEventListener("click", () => openCalibrateDialog(id));
+        actionTd.append(calibrate);
+        if (manual) {
+          // PSCK 只能映射成 1500，这两个轴的目标不是 1500，没有命令可用。
+          calibrate.hidden = true;
+          const note = document.createElement("span");
+          note.className = "row-hint";
+          note.textContent = `目标 ${plan.target}，无命令可用，请到「舵机读数」页手动旋转舵盘对位`;
+          actionTd.append(note);
+        }
+        tr.append(actionTd);
+        elements.zeroBody.append(tr);
+        state.rows.zero.set(id, { current, calibrate, manual });
+      });
+    }
+
+    /** 改号时自动发的 PCSM 会让该轴哑到断电重启，这里把它和"未发现"区分开。 */
+    function updatePendingNote() {
+      const pendingIds = Object.keys(state.pendingPowerCycle);
+      if (pendingIds.length) {
+        const listed = pendingIds
+          .map((id) => `${formatId(id)}（${state.pendingPowerCycle[id]}）`)
+          .join("、");
+        elements.pendingNote.textContent =
+          `${listed} 已写入开机释力设置，在断电重启前不会再回包。`
+          + "这是该命令的正常行为，不是掉线，也不需要重发。";
+        elements.pendingNote.hidden = false;
+      } else {
+        elements.pendingNote.hidden = true;
+      }
+    }
+
+    async function loadTargets() {
+      const payload = await apiFetch("/api/targets", {}, "读取标定表");
+      if (!payload || !payload.plan) return;
+      state.plan = payload.plan;
+      if (typeof payload.tolerance === "number") {
+        state.tolerance = payload.tolerance;
+        elements.toleranceInput.value = String(payload.tolerance);
+      }
+      buildReadingTable();
+      buildZeroTable();
+      updatePendingNote();
+      // 表格是异步建好的，如果此时已有读数状态（例如刷新页面时某几路仍在读），
+      // 立刻回填一次，避免闪一下"未开启"。
+      updateReadingCells();
+      updateActionAvailability();
+      scheduleReadingPoll();
+    }
+
+    async function toggleReading(id) {
+      const active = state.activeIds.includes(id);
+      const path = active ? "/api/reading/stop" : "/api/reading/start";
+      const body = active
+        ? { id }
+        : { id, release_torque: !elements.keepTorque.checked };
+      const payload = await apiFetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      }, `${formatId(id)} ${active ? "停止" : "开始"}读数`);
+      if (!payload) return;
+      addLog(
+        active
+          ? `${formatId(id)} 已停止读数（保持释力，可继续手动转动）`
+          : `${formatId(id)} 开始读数${elements.keepTorque.checked ? "" : "，已释力"}`,
+        "info",
+      );
+      if (active) {
+        state.activeIds = state.activeIds.filter((value) => value !== id);
+      } else if (!state.activeIds.includes(id)) {
+        state.activeIds = [...state.activeIds, id].sort((a, b) => a - b);
+      }
+      updateReadingCells();
+      updateActionAvailability();
+      scheduleReadingPoll();
+    }
+
+    async function stopAllReading() {
+      for (const id of [...state.activeIds]) {
+        await toggleReading(id);
+      }
+    }
+
+    /** 读数轮询不写日志，否则 5Hz 会把操作日志刷爆；只有连续失败才记一条。 */
+    async function pollReadings() {
+      state.readingTimer = null;
+      if (!state.activeIds.length || document.hidden) return;
+      try {
+        const response = await fetch("/api/readings");
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const payload = await response.json();
+        state.readings = payload.readings || {};
+        state.activeIds = Array.isArray(payload.active_ids) ? payload.active_ids : [];
+        if (typeof payload.tolerance === "number") state.tolerance = payload.tolerance;
+        if (state.readingFailStreak >= 3) addLog("读数已恢复", "success");
+        state.readingFailStreak = 0;
+        state.backoffLogged = false;
+        updateReadingCells();
+        updateActionAvailability();
+      } catch (error) {
+        state.readingFailStreak += 1;
+        if (state.readingFailStreak >= 3 && !state.backoffLogged) {
+          state.backoffLogged = true;
+          addLog(`读数中断，正在每 ${READING_BACKOFF_MS / 1000} 秒重试`, "error");
+        }
+      }
+      scheduleReadingPoll();
+    }
+
+    function scheduleReadingPoll() {
+      if (state.readingTimer !== null) {
+        window.clearTimeout(state.readingTimer);
+        state.readingTimer = null;
+      }
+      if (!state.activeIds.length || document.hidden) return;
+      const delay = state.readingFailStreak >= 3 ? READING_BACKOFF_MS : READING_POLL_MS;
+      state.readingTimer = window.setTimeout(pollReadings, delay);
+    }
+
+    async function refreshZeroReadings() {
+      setWritingBusy(true);
+      for (const id of SERVO_IDS) {
+        const row = state.rows.zero.get(id);
+        const payload = await apiFetch(`/api/reading/${id}`);  // 静默：结果直接填进表格
+        if (row) row.current.textContent = payload && payload.pwm !== undefined ? String(payload.pwm) : "————";
+      }
+      setWritingBusy(false);
+    }
+
+    // ------------------------------------------------------------ 写入弹窗
+
+    function openWriteDialog(descriptor) {
+      state.pendingWrite = descriptor;
+      elements.writeTitle.textContent = descriptor.title;
+      elements.writeDescription.textContent = descriptor.description;
+      elements.writeWarning.innerHTML = descriptor.warning;
+      elements.writeCommands.replaceChildren();
+      descriptor.commands().forEach((command) => {
+        const li = document.createElement("li");
+        li.textContent = command;
+        elements.writeCommands.append(li);
+      });
+      elements.writeExpected.textContent = descriptor.expected;
+      elements.writeConfirm.value = "";
+      elements.writeResult.hidden = true;
+      elements.writeResult.textContent = "";
+      elements.writeExecute.disabled = false;
+      elements.writeCancel.disabled = false;
+      elements.writeCancel.textContent = "取消";
+      elements.writeDialog.showModal();
+    }
+
+    function showDialogResult(text, ok) {
+      elements.writeResult.hidden = false;
+      elements.writeResult.className = `dialog-result ${ok ? "ok" : "bad"}`;
+      elements.writeResult.textContent = text;
+      // 已经执行过一次了，这个按钮的语义从「放弃」变成「关掉」。
+      elements.writeCancel.textContent = "关闭";
+    }
+
+    async function executeWrite() {
+      const descriptor = state.pendingWrite;
+      if (!descriptor) return;
+      elements.writeExecute.disabled = true;
+      // 写入过程中不允许关闭弹窗，避免中途点掉后不知道写没写。
+      elements.writeCancel.disabled = true;
+      setWritingBusy(true);
+      const body = descriptor.body({ confirmText: elements.writeConfirm.value });
+      const { payload } = await apiRequest(descriptor.path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      }, descriptor.title);
+      setWritingBusy(false);
+      elements.writeExecute.disabled = false;
+      elements.writeCancel.disabled = false;
+      if (!payload) {
+        showDialogResult("请求失败或响应无法解析，详情见操作日志。", false);
+        return;
+      }
+      if (payload.ok) {
+        // 成功就自动关窗；完整结果落进操作日志，关掉弹窗不会丢信息。
+        const summary = descriptor.describeSuccess(payload);
+        console.debug("[servo-gui] 写入完成", descriptor.title, summary);
+        addLog(descriptor.logLine ? descriptor.logLine(payload) : `${descriptor.title} 完成`, "success");
+        elements.writeDialog.close();
+        await descriptor.afterWrite?.(payload);
+        return;
+      }
+      // 失败保留弹窗：确认文本写错这类情况，改一下就能重试，不该把窗关掉重开。
+      const message = payload.error ? payload.error.message : "写入失败";
+      showDialogResult(message, false);
+      if (payload.partial) await descriptor.afterWrite?.(payload);
+    }
+
+    function selectId(id) {
+      state.selectedId = id;
+      renderIdButtons();
+      updateActionAvailability();
+      // 七个按钮不指定源 ID：默认改总线上唯一在线的那个（后端会强制校验只有一个）。
+      const sourceId = state.foundIds.length === 1 ? state.foundIds[0] : 0;
+      openIdDialog(sourceId, id, false);
+
+    }
+
+    /** 手动指定源 ID 的入口：当前 ID / 目标 ID 两个输入框 + 「改号」按钮。 */
+    function submitManualId() {
+      const raw = (input) => input.value.trim();
+      const parse = (text) => (/^\d{1,3}$/.test(text) ? Number.parseInt(text, 10) : null);
+      const sourceId = parse(raw(elements.manualSource));
+      const targetId = parse(raw(elements.manualTarget));
+      if (sourceId === null || sourceId < 0 || sourceId > 254) {
+        addLog("当前 ID 必须是 0 到 254 之间的数字，例如 002", "error");
+        return;
+      }
+      if (targetId === null || targetId < 1 || targetId > 7) {
+        addLog("目标 ID 必须是 001 到 007 之间的数字", "error");
+        return;
+      }
+      if (sourceId === targetId) {
+        addLog(`当前 ID 与目标 ID 不能相同（都是 ${formatId(sourceId)}）`, "error");
+        return;
+      }
+      openIdDialog(sourceId, targetId, true);
+
+    }
+
+    function openIdDialog(sourceId, id, manual) {
+      const exists = state.foundIds.includes(id);
+      openWriteDialog({
+        title: `把 ${formatId(sourceId)} 改号为 ${formatId(id)}`,
+        description: exists
+          ? `注意：当前扫描结果里 ${formatId(id)} 已经存在。改号前请确认总线上只连了一个待改号的舵机。`
+          : manual
+            ? `将把 ${formatId(sourceId)} 改成 ${formatId(id)}。总线上必须只有 ${formatId(sourceId)} 这一个舵机。`
+            : `将把总线上唯一在线的舵机（源 ID ${formatId(sourceId)}）改成 ${formatId(id)}。`,
+        warning: "<strong>这是两条持久写入，掉电不丢失。</strong>"
+          + " 改号前后端会强制校验总线上有且只有一个舵机。改号成功后会对新 ID"
+          + " <strong>自动追加一条 <span class=\"mono\">PCSM</span></strong>（开机释力）："
+          + " 该舵机以后每次上电都不再自持力矩，且从那一刻起到断电重启前不会再回包。",
+        expected: `SET ID ${formatId(id)}`,
+        path: "/api/set_id",
+        commands: () => [`#${formatId(sourceId)}PID${formatId(id)}!`, `#${formatId(id)}PCSM!`],
+        body: ({ confirmText }) => ({
+          source_id: sourceId,
+          target_id: id,
+          confirm_text: confirmText,
+        }),
+        describeSuccess: (payload) => {
+          const lines = [`改号成功：${payload.id_write.command} → ${payload.id_write.response}`,
+            `改号后扫描：${JSON.stringify(payload.id_write.scan_after)}`];
+          if (payload.boot_release) {
+            lines.push(`开机释力：${payload.boot_release.command} → ${payload.boot_release.response}`);
+            lines.push("注意：命令已接受，但手册没有读回该状态的命令，需断电重启后手拧舵盘确认。");
+            if (payload.boot_release.goes_silent) {
+              lines.push("该舵机现在起到断电重启前都不会再回包——这是 PCSM 的正常行为，不是掉线，不要重发。");
+            }
+          } else {
+            lines.push("未设置开机释力（本次未勾选）。");
+          }
+          return lines.join("\n");
+        },
+        logLine: (payload) => {
+          const base = `${formatId(sourceId)} 已改号为 ${formatId(id)}`;
+          if (payload.boot_release && payload.boot_release.ok) {
+            return `${base}，并已设置开机释力；该舵机需断电重启后才会再响应`;
+          }
+          return base;
+        },
+        afterWrite: async () => {
+          await scan();
+          if (manual) {
+            elements.manualSource.value = "";
+            elements.manualTarget.value = "";
+          }
+        },
+      });
+    }
+
+    function openCalibrateDialog(id) {
+      const plan = planOf(id);
+      if (!plan) return;
+      openWriteDialog({
+        title: `标定 ${formatId(id)} 的机械零位`,
+        description: `把 ${formatId(id)} 所在关节放到正确机械零位并持续扶稳，`
+          + `执行后当前物理位置会被写成 ${plan.target}。`,
+        warning: "<strong>持久写入，掉电不丢失。</strong>"
+          + " 不需要先把舵盘手动拧到目标 PWM——命令会把当前位置直接定义为目标值。"
+          + " 写入前连续采样三次，跨度超过 5 会拒绝；写入后以 PRAD 回读为准，"
+          + " <span class=\"mono\">#OK!</span> 不作为最终验证。"
+          + " <strong>执行时扶住关节</strong>——PSCK 改的是坐标原点，舵机可能朝新坐标下的旧目标运动；"
+          + " 工具会在写入后立刻补发一次 <span class=\"mono\">PULK</span> 压住，但那一瞬间挡不住。",
+        expected: `CALIBRATE ${formatId(id)} TO ${String(plan.target).padStart(4, "0")}`,
+        path: "/api/calibrate_zero",
+        commands: () => [`#${formatId(id)}${plan.command}!`],
+        body: ({ confirmText }) => ({ id, confirm_text: confirmText }),
+        describeSuccess: (payload) => {
+          return `标定成功：${payload.command} → ${payload.response}\n`
+            + `标定前 ${payload.before} → 回读 ${payload.after}（目标 ${payload.target}，容差 ±${payload.tolerance}）\n`
+            + "已保持释力状态，未发送 PULR。";
+        },
+        logLine: (payload) => `${formatId(id)} 零位标定完成，回读 ${payload.after}（目标 ${payload.target}）`,
+        afterWrite: async (payload) => {
+          const row = state.rows.zero.get(id);
+          if (row && payload.after !== undefined && payload.after !== null) {
+            row.current.textContent = String(payload.after);
+          }
+        },
+      });
+    }
+
+    function selectTab(selectedTab) {
+      elements.tabs.forEach((tab) => {
+        const selected = tab === selectedTab;
+        tab.setAttribute("aria-selected", String(selected));
+        document.querySelector(`#${tab.getAttribute("aria-controls")}`).hidden = !selected;
+      });
+    }
+
+    function stopPolling() {
+      if (state.pollTimer !== null) {
+        window.clearInterval(state.pollTimer);
+        state.pollTimer = null;
+      }
+    }
+
+    function startPolling() {
+      stopPolling();
+      if (!document.hidden) {
+        state.pollTimer = window.setInterval(refreshStatus, POLL_INTERVAL_MS);
+      }
+    }
+
+    function onStatusApplied() {
+      updatePendingNote();
+      updateActionAvailability();
+      scheduleReadingPoll();
+    }
+
+    elements.connectButton.addEventListener("click", connect);
+    elements.disconnectButton.addEventListener("click", disconnect);
+    elements.scanButton.addEventListener("click", scan);
+    elements.portSelect.addEventListener("change", () => {
+      elements.connectButton.disabled = state.connected || !elements.portSelect.value;
+    });
+    elements.clearLogButton.addEventListener("click", () => elements.logPanel.replaceChildren());
+    elements.tabs.forEach((tab) => tab.addEventListener("click", () => selectTab(tab)));
+    elements.manualSetId.addEventListener("click", submitManualId);
+    [elements.manualSource, elements.manualTarget].forEach((input) => {
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") submitManualId();
+      });
+    });
+    elements.stopAllReading.addEventListener("click", stopAllReading);
+    elements.refreshZero.addEventListener("click", refreshZeroReadings);
+    elements.toleranceInput.addEventListener("change", async () => {
+      const value = Number.parseInt(elements.toleranceInput.value, 10);
+      if (!Number.isInteger(value) || value < 0 || value > 500) {
+        addLog("容差必须是 0 到 500 的整数", "error");
+        elements.toleranceInput.value = String(state.tolerance);
+        return;
+      }
+      const payload = await apiFetch("/api/tolerance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tolerance: value }),
+      }, "设置容差");
+      if (payload) {
+        state.tolerance = value;
+        updateReadingCells();
+        addLog(`容差已设为 ±${value}`, "info");
+      }
+    });
+    elements.writeCancel.addEventListener("click", () => elements.writeDialog.close());
+    elements.writeExecute.addEventListener("click", executeWrite);
+    elements.writeDialog.addEventListener("click", (event) => {
+      if (event.target === elements.writeDialog && !state.writing) elements.writeDialog.close();
+    });
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        stopPolling();
+        scheduleReadingPoll();
+      } else {
+        refreshStatus();
+        startPolling();
+        scheduleReadingPoll();
+      }
+    });
+
+    renderIdButtons();
+    addLog("界面已加载", "info");
+    loadTargets();
+    loadPorts();
+    refreshStatus();
+    startPolling();
+  </script>
+</body>
+</html>
